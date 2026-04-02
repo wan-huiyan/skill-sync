@@ -27,6 +27,8 @@ then push updates with a single command.
 
 - **[publish-skill](https://github.com/wan-huiyan/publish-skill)** — First-time publishing (repo creation, README, screenshots, awesome-list). After publishing, run `/skill-sync init` to register the new skill.
 - **[schliff](https://github.com/Zandereins/schliff)** — Score and improve skill quality before syncing.
+- **[skill-anonymizer](https://github.com/wan-huiyan/skill-anonymizer)** — Scan for client-identifying data before pushing. New content added locally may introduce client names, amounts, or domain-specific details that weren't in the original publish.
+- **[data-provenance-verifier](https://github.com/wan-huiyan/data-provenance-verifier)** — Verify any new data files (CSV, JSON, examples/) have provenance documentation before pushing.
 
 ## Commands
 

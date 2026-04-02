@@ -52,6 +52,8 @@ git clone https://github.com/wan-huiyan/skill-sync.git ~/.cursor/skills/skill-sy
 
 - **[publish-skill](https://github.com/wan-huiyan/publish-skill)** — First-time publishing (repo creation, README, screenshots, awesome-list). After publishing, run `/skill-sync init` to register.
 - **[schliff](https://github.com/Zandereins/schliff)** — Score and improve skill quality before syncing.
+- **[skill-anonymizer](https://github.com/wan-huiyan/skill-anonymizer)** — Scan for client-identifying data before pushing. New content added locally may introduce client names, amounts, or domain-specific details.
+- **[data-provenance-verifier](https://github.com/wan-huiyan/data-provenance-verifier)** — Verify any new data files have provenance documentation before pushing.
 
 ## Key Design Decisions
 
@@ -89,6 +91,8 @@ git clone https://github.com/wan-huiyan/skill-sync.git ~/.cursor/skills/skill-sy
 
 - [publish-skill](https://github.com/wan-huiyan/publish-skill) — First-time skill publishing (skill-sync is its companion for ongoing maintenance)
 - [schliff](https://github.com/Zandereins/schliff) — Score and improve skill quality before syncing
+- [skill-anonymizer](https://github.com/wan-huiyan/skill-anonymizer) — Scan for client-identifying data before pushing updates
+- [data-provenance-verifier](https://github.com/wan-huiyan/data-provenance-verifier) — Verify data files have provenance documentation
 
 ## Version History
 
