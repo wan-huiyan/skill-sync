@@ -140,19 +140,33 @@ When pushing a version update (not just content edits), ensure ALL copies are co
 
 ### Badge version sync
 
-If README.md contains a shields.io badge row, update the version badge automatically:
+**Dynamic badges** (`github/v/release`, `github/license`, `github/last-commit`) auto-update
+from GitHub API — no action needed on version bump. Just create a new GitHub release:
 
 ```bash
-# Detect and update version badge
-OLD_VER="old_version"
-NEW_VER="new_version"
-sed -i '' "s|badge/version-${OLD_VER}-|badge/version-${NEW_VER}-|g" README.md
-# Also update eval assertion count if eval-suite.json changed
+gh release create v${NEW_VER} --repo ${USERNAME}/${SKILL_NAME} \
+  --title "v${NEW_VER}" --notes "Release notes here"
+```
+
+**Static badges** (eval assertions, papers, python version) need manual update:
+
+```bash
+# Update eval assertion count if eval-suite.json changed
 ASSERTION_COUNT=$(python3 -c "import json; print(len(json.load(open('eval-suite.json')).get('assertions',[])))" 2>/dev/null)
 if [ -n "$ASSERTION_COUNT" ]; then
   sed -i '' "s|badge/eval_assertions-[0-9]*_passed|badge/eval_assertions-${ASSERTION_COUNT}_passed|g" README.md
 fi
+
+# Update paper count if bibliography changed
+PAPER_COUNT=$(grep -c '^\- \[' references/bibliography.md 2>/dev/null)
+if [ -n "$PAPER_COUNT" ]; then
+  sed -i '' "s|badge/grounded_in-[0-9]*%2B_papers|badge/grounded_in-${PAPER_COUNT}%2B_papers|g" README.md
+fi
 ```
+
+**Detecting badge type:** Dynamic badges contain `github/v/release` or `github/license`
+in the URL. Static badges contain `badge/version-` or `badge/license-`. If a repo still
+uses static version/license badges, suggest upgrading to dynamic ones.
 
 Verify no stale version strings remain:
 ```bash
