@@ -135,7 +135,24 @@ When pushing a version update (not just content edits), ensure ALL copies are co
 4. `.claude-plugin/plugin.json` — version field + keywords
 5. `marketplace.json` — version field
 6. `README.md` — version history table
-7. `references/changelog.md` — if exists
+7. `README.md` — badge row version (if badges exist)
+8. `references/changelog.md` — if exists
+
+### Badge version sync
+
+If README.md contains a shields.io badge row, update the version badge automatically:
+
+```bash
+# Detect and update version badge
+OLD_VER="old_version"
+NEW_VER="new_version"
+sed -i '' "s|badge/version-${OLD_VER}-|badge/version-${NEW_VER}-|g" README.md
+# Also update eval assertion count if eval-suite.json changed
+ASSERTION_COUNT=$(python3 -c "import json; print(len(json.load(open('eval-suite.json')).get('assertions',[])))" 2>/dev/null)
+if [ -n "$ASSERTION_COUNT" ]; then
+  sed -i '' "s|badge/eval_assertions-[0-9]*_passed|badge/eval_assertions-${ASSERTION_COUNT}_passed|g" README.md
+fi
+```
 
 Verify no stale version strings remain:
 ```bash
