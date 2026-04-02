@@ -26,7 +26,7 @@ then push updates with a single command.
 ## Companion Skills
 
 - **[publish-skill](https://github.com/wan-huiyan/publish-skill)** — First-time publishing (repo creation, README, screenshots, awesome-list). After publishing, run `/skill-sync init` to register the new skill.
-- **schliff** — Score and improve skill quality before syncing.
+- **[schliff](https://github.com/Zandereins/schliff)** — Score and improve skill quality before syncing.
 
 ## Commands
 

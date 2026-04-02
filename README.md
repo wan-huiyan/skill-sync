@@ -51,7 +51,7 @@ git clone https://github.com/wan-huiyan/skill-sync.git ~/.cursor/skills/skill-sy
 ## Companion Skills
 
 - **[publish-skill](https://github.com/wan-huiyan/publish-skill)** — First-time publishing (repo creation, README, screenshots, awesome-list). After publishing, run `/skill-sync init` to register.
-- **schliff** — Score and improve skill quality before syncing.
+- **[schliff](https://github.com/Zandereins/schliff)** — Score and improve skill quality before syncing.
 
 ## Key Design Decisions
 
@@ -87,9 +87,8 @@ git clone https://github.com/wan-huiyan/skill-sync.git ~/.cursor/skills/skill-sy
 
 ## Related Skills
 
-- [publish-skill](https://github.com/wan-huiyan/publish-skill) — First-time skill publishing
-- [skill-anonymizer](https://github.com/wan-huiyan/skill-anonymizer) — Client data audit before publishing
-- [data-provenance-verifier](https://github.com/wan-huiyan/data-provenance-verifier) — Verify data files ship with provenance
+- [publish-skill](https://github.com/wan-huiyan/publish-skill) — First-time skill publishing (skill-sync is its companion for ongoing maintenance)
+- [schliff](https://github.com/Zandereins/schliff) — Score and improve skill quality before syncing
 
 ## Version History
 
