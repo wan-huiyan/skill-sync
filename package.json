@@ -1,0 +1,10 @@
+{
+  "name": "skill-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Keep locally installed Claude Code skills in sync with their GitHub repos",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "type": "module"
+}
