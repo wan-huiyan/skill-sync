@@ -1,0 +1,10 @@
+{
+  "name": "wan-huiyan-skill-sync",
+  "owner": { "name": "Huiyan Wan" },
+  "plugins": [{
+    "name": "skill-sync",
+    "source": ".",
+    "description": "Keep locally installed Claude Code skills in sync with their GitHub repos",
+    "version": "1.0.0"
+  }]
+}

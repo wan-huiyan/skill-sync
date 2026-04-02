@@ -1,0 +1,102 @@
+# skill-sync
+
+Keep locally installed Claude Code skills in sync with their GitHub repos.
+
+## Quick Start
+
+```
+You: /skill-sync
+Claude: Scanning 18 registered skills...
+
+Skill                    Repo                              Type      Status
+---
+causal-impact-campaign   wan-huiyan/causal-impact-campaign  authored  IN SYNC
+permutation-validation   wan-huiyan/permutation-validation  authored  DIRTY (SKILL.md)
+field-notes              wan-huiyan/field-notes             fork      IN SYNC
+
+You: /skill-sync push permutation-validation
+Claude: Cloning wan-huiyan/permutation-validation...
+        Copying SKILL.md...
+        Committed and pushed: "docs: sync permutation-validation from local skill updates"
+```
+
+## Installation
+
+**Claude Code:**
+```bash
+git clone https://github.com/wan-huiyan/skill-sync.git ~/.claude/skills/skill-sync
+```
+
+**Cursor:**
+```bash
+git clone https://github.com/wan-huiyan/skill-sync.git ~/.cursor/skills/skill-sync
+```
+
+## What You Get
+
+| Command | What it does |
+|---|---|
+| `/skill-sync` | Scan all registered skills, show sync status table |
+| `/skill-sync init` | Populate registry by matching `gh repo list` against local `~/.claude/skills/` |
+| `/skill-sync push` | Push all dirty authored skills to their GitHub repos |
+| `/skill-sync push <name>` | Push a single skill |
+
+## How It Works
+
+1. **Registry** (`~/.claude/skill-sync-registry.json`) maps local skill directories to GitHub repos
+2. **Init** scans your GitHub repos via `gh repo list`, matches against installed skills, detects forks vs authored
+3. **Status** clones each repo to `/tmp`, diffs tracked files against local copies
+4. **Push** copies local files to cloned repo, commits, pushes, cleans up
+
+## Companion Skills
+
+- **[publish-skill](https://github.com/wan-huiyan/publish-skill)** — First-time publishing (repo creation, README, screenshots, awesome-list). After publishing, run `/skill-sync init` to register.
+- **schliff** — Score and improve skill quality before syncing.
+
+## Key Design Decisions
+
+- **Registry over auto-detection**: A JSON registry is explicit and editable, vs scanning `.git/config` or `plugin.json` which may be stale or missing
+- **Clone-copy-push over local git**: Skills installed via `git clone` may have dirty working trees, detached HEADs, or stale remotes. Cloning fresh to `/tmp` avoids all git state issues
+- **Authored vs fork distinction**: Forks get a warning ("consider opening an upstream PR") instead of silent pushes that diverge from upstream
+- **Version bump checklist absorbed from publish-skill**: Keeps all update-related guidance in one place instead of split across two skills
+
+## Limitations
+
+- Requires `gh` CLI authenticated with push access to your repos
+- Does not auto-detect new skills — run `/skill-sync init` after using `/publish-skill`
+- Does not handle merge conflicts — if the remote has changes not in your local copy, push will fail and you'll need manual resolution
+- Registry is per-machine — not synced across devices
+
+## Dependencies
+
+- **Required:** `gh` CLI (GitHub CLI) — for repo listing, cloning, pushing
+- **Required:** `git` — for clone, diff, commit, push operations
+- **Optional:** `jq` — for registry JSON manipulation (falls back to Python)
+
+<details>
+<summary>Quality Checklist</summary>
+
+- [x] Detects all skills with matching GitHub repos
+- [x] Distinguishes authored vs forked skills
+- [x] Shows per-file diff status (not just "dirty")
+- [x] Copies to both root and `skills/{name}/` paths in repo
+- [x] Includes version bump checklist for major updates
+- [x] Warns about upstream PRs for forked skills
+- [x] Cleans up `/tmp` clones after operations
+</details>
+
+## Related Skills
+
+- [publish-skill](https://github.com/wan-huiyan/publish-skill) — First-time skill publishing
+- [skill-anonymizer](https://github.com/wan-huiyan/skill-anonymizer) — Client data audit before publishing
+- [data-provenance-verifier](https://github.com/wan-huiyan/data-provenance-verifier) — Verify data files ship with provenance
+
+## Version History
+
+| Version | Date | Changes |
+|---|---|---|
+| 1.0.0 | 2026-04-02 | Initial release: init, status, push commands. Registry format. Version bump checklist absorbed from publish-skill. |
+
+## License
+
+MIT

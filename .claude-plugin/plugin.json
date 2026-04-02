@@ -1,0 +1,9 @@
+{
+  "name": "skill-sync",
+  "description": "Keep locally installed Claude Code skills in sync with their GitHub repos",
+  "version": "1.0.0",
+  "author": { "name": "Huiyan Wan" },
+  "repository": "https://github.com/wan-huiyan/skill-sync",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill-management", "git-sync", "devtools"]
+}

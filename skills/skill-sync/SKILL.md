@@ -1,0 +1,162 @@
+---
+name: skill-sync
+version: "1.0.0"
+description: |
+  Keep locally installed Claude Code skills in sync with their GitHub repos.
+  Use when the user says "sync my skills", "push skill updates", "which skills
+  are out of date?", "skill-sync", "push my skill changes", "are my skills in
+  sync?", "register my skills", or "init skill registry". Companion to
+  publish-skill (publish = first-time, skill-sync = ongoing maintenance).
+  Do NOT use for creating new skills (use skill-creator), first-time publishing
+  (use publish-skill), or improving skill quality (use schliff).
+---
+
+# Skill Sync — Keep Skills in Sync with GitHub
+
+Detect which locally installed skills have drifted from their GitHub repos,
+then push updates with a single command.
+
+## When to Use
+
+- After editing a local skill's SKILL.md, eval-suite.json, or references/
+- To check which published skills have unpushed local changes
+- To populate the registry after first-time publishing with `/publish-skill`
+- To push accumulated skill updates across multiple repos at once
+
+## Companion Skills
+
+- **[publish-skill](https://github.com/wan-huiyan/publish-skill)** — First-time publishing (repo creation, README, screenshots, awesome-list). After publishing, run `/skill-sync init` to register the new skill.
+- **schliff** — Score and improve skill quality before syncing.
+
+## Commands
+
+### `/skill-sync` (default: status)
+
+Scan all registered skills and show a status table:
+
+```
+Skill                    Repo                              Type      Status
+─────────────────────────────────────────────────────────────────────────────
+causal-impact-campaign   wan-huiyan/causal-impact-campaign  authored  IN SYNC
+permutation-validation   wan-huiyan/permutation-validation  authored  DIRTY (SKILL.md)
+field-notes              wan-huiyan/field-notes             fork      IN SYNC
+agent-review-panel       wan-huiyan/agent-review-panel      authored  DIRTY (SKILL.md, eval-suite.json)
+```
+
+### `/skill-sync init`
+
+Populate the registry by scanning GitHub repos + local skill directories:
+
+1. Run `gh repo list {username} --json name,isFork,url --limit 100`
+2. Match repo names against `~/.claude/skills/*/` directories
+3. For each match, determine tracked files by listing the local skill dir
+4. For forks: record upstream via `gh repo view {repo} --json parent`
+5. Write registry to `~/.claude/skill-sync-registry.json`
+
+### `/skill-sync push`
+
+Push ALL dirty authored skills to their GitHub repos.
+
+### `/skill-sync push <skill-name>`
+
+Push a single skill.
+
+## Registry Format
+
+Stored at `~/.claude/skill-sync-registry.json`:
+
+```json
+{
+  "github_username": "wan-huiyan",
+  "updated_at": "2026-04-02T10:00:00Z",
+  "skills": {
+    "causal-impact-campaign": {
+      "repo": "wan-huiyan/causal-impact-campaign",
+      "type": "authored",
+      "tracked_files": ["SKILL.md", "eval-suite.json", "references/code_templates.md"]
+    },
+    "field-notes": {
+      "repo": "wan-huiyan/field-notes",
+      "type": "fork",
+      "upstream": "wentingwang21/field-notes",
+      "tracked_files": ["SKILL.md"]
+    }
+  }
+}
+```
+
+**`type` values:**
+- `authored` — user created this skill, push directly
+- `fork` — user forked someone else's skill, warn about upstream PR when pushing
+
+## Sync Workflow (per skill)
+
+### Detecting drift
+
+For each registered skill:
+
+1. Clone repo to `/tmp/skill-sync-{name}` (shallow: `--depth 1`)
+2. Compare each tracked file: `diff local_file repo_file`
+3. Report status: IN SYNC, DIRTY (list changed files), or MISSING (local skill deleted)
+4. Clean up `/tmp` clone after comparison
+
+### Pushing updates
+
+For each dirty skill:
+
+1. Clone repo to `/tmp/skill-sync-{name}` (full clone for committing)
+2. Copy tracked files from `~/.claude/skills/{name}/` to the cloned repo:
+   - Root copy: `SKILL.md` → repo root `SKILL.md`
+   - Nested copy: `SKILL.md` → `skills/{name}/SKILL.md` (if that path exists in repo)
+   - Other files: copy to matching paths in repo
+3. `git add` changed files
+4. Commit with message: `docs: sync {name} from local skill updates`
+5. `git push origin main`
+6. Clean up `/tmp` clone
+7. For forks: after pushing, warn: "This is a fork of {upstream}. Consider opening a PR to upstream."
+
+### Commit message convention
+
+```
+docs: sync {skill-name} from local skill updates
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+```
+
+## Version Bump Checklist
+
+When pushing a version update (not just content edits), ensure ALL copies are consistent:
+
+1. `~/.claude/skills/{name}/SKILL.md` — local installed copy (frontmatter version)
+2. Repo root `SKILL.md` — matches local
+3. Repo `skills/{name}/SKILL.md` — nested copy (often forgotten, diverges silently)
+4. `.claude-plugin/plugin.json` — version field + keywords
+5. `marketplace.json` — version field
+6. `README.md` — version history table
+7. `references/changelog.md` — if exists
+
+Verify no stale version strings remain:
+```bash
+grep -rn "old_version" /tmp/skill-sync-{name}/
+```
+
+### Common failure modes
+
+- **README and .claude-plugin/ lag behind SKILL.md** — always update all in one commit
+- **Nested `skills/` copy forgotten** — diverges silently from root copy. The sync workflow copies to both locations automatically.
+- **Installed `~/.claude/skills/` copy N versions behind** — if more than 1 version behind, do a full overwrite rather than incremental patching
+- **Metadata updated but SKILL.md forgotten** — bump SKILL.md frontmatter version FIRST, then propagate to metadata. A repo where `plugin.json` says v1.5 but `SKILL.md` says v1.0 signals broken process.
+
+## Error Handling
+
+- If `gh` CLI not authenticated: report error, suggest `gh auth login`
+- If repo not found on GitHub: suggest running `/publish-skill` first
+- If local skill directory missing: mark as MISSING in status, suggest removing from registry
+- If push fails (permissions, conflicts): report error, suggest manual resolution
+- If registry doesn't exist: suggest running `/skill-sync init`
+
+## Scope Boundaries
+
+- **Use this skill** for ongoing sync of already-published skills
+- **Do NOT use for** first-time publishing (use `publish-skill`), creating skills (use `skill-creator`), or improving quality (use `schliff`)
+- **Hand off to** `publish-skill` if the skill has no GitHub repo yet
