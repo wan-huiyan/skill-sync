@@ -1,7 +1,7 @@
 # skill-sync
 [![GitHub release](https://img.shields.io/github/v/release/wan-huiyan/skill-sync)](https://github.com/wan-huiyan/skill-sync/releases) [![Claude Code](https://img.shields.io/badge/Claude_Code-skill-orange)](https://claude.com/claude-code) [![license](https://img.shields.io/github/license/wan-huiyan/skill-sync)](LICENSE) [![last commit](https://img.shields.io/github/last-commit/wan-huiyan/skill-sync)](https://github.com/wan-huiyan/skill-sync/commits)
 
-Keep locally installed Claude Code skills in sync with their GitHub repos.
+After improving skills locally across multiple sessions, pushing changes back to GitHub means cloning, diffing, and copying files for every skill. This skill automates that for your entire published portfolio at once.
 
 ## Quick Start
 
