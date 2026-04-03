@@ -21,6 +21,10 @@ Claude: Cloning wan-huiyan/permutation-validation...
         Committed and pushed: "docs: sync permutation-validation from local skill updates"
 ```
 
+## Why a Claude Code Skill?
+
+The sync workflow involves cloning repos, diffing tracked files, copying to correct paths (root AND nested `skills/` copy), checking the version bump checklist, and pushing — across every dirty skill at once. Claude also handles the judgment calls: which files to track, whether a diff is meaningful, and whether a version bump is needed before pushing. A shell script can clone and copy; it can't read a SKILL.md and decide whether the version number needs bumping.
+
 ## Installation
 
 **Claude Code:**
