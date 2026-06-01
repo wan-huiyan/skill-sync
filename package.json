@@ -1,6 +1,6 @@
 {
   "name": "skill-sync",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Keep locally installed Claude Code skills in sync with their GitHub repos",
   "scripts": {

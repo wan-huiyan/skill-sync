@@ -1,6 +1,6 @@
 ---
 name: skill-sync
-version: "1.1.0"
+version: "1.2.0"
 description: |
   Keep locally installed Claude Code skills in sync with their GitHub repos.
   Use when the user says "sync my skills", "push skill updates", "which skills
@@ -71,6 +71,31 @@ Push ALL dirty authored skills to their GitHub repos.
 
 Push a single skill.
 
+### `/skill-sync validate` or `/skill-sync validate <skill-name>`
+
+Run the test suite before pushing. Acts as a pre-push quality gate.
+
+For each dirty skill (or the named skill):
+
+1. Check if `tests/` directory and `package.json` exist in the local repo
+2. If tests exist: run `cd {repo} && npm test`
+3. If tests pass: report PASS, skill is ready for push
+4. If tests fail: report FAIL with failure details, do NOT push
+5. If no tests exist: report WARN "No tests found. Run `~/Documents/skill-test-templates/backfill.sh {repo}` to generate tests, or push with `--no-validate`"
+
+### `/skill-sync backfill-tests`
+
+Generate tests for all registered skills that don't have them yet.
+
+For each skill in the registry that has eval-suite.json but no `tests/` directory:
+
+1. Run `~/Documents/skill-test-templates/backfill.sh {repo}`
+2. Run `npm test` to verify
+3. If pass: commit `test: add automated test suite` + push to default branch
+4. If fail: log the failure, skip, report to user
+
+**Templates location:** `~/Documents/skill-test-templates/`
+
 ## Registry Format
 
 Stored at `~/.claude/skill-sync-registry.json`:
@@ -114,6 +139,7 @@ For each registered skill:
 
 For each dirty skill:
 
+0. **Pre-push validation:** If `tests/` and `package.json` exist in the repo, run `npm test`. If tests fail, stop and report. Skip with `--no-validate` flag.
 1. Clone repo to `/tmp/skill-sync-{name}` (full clone for committing)
 2. Copy tracked files from `~/.claude/skills/{name}/` to the cloned repo:
    - Root copy: `SKILL.md` → repo root `SKILL.md`
@@ -139,12 +165,22 @@ When pushing a version update (not just content edits), ensure ALL copies are co
 
 1. `~/.claude/skills/{name}/SKILL.md` — local installed copy (frontmatter version)
 2. Repo root `SKILL.md` — matches local
-3. Repo `skills/{name}/SKILL.md` — nested copy (often forgotten, diverges silently)
+3. Repo `plugins/{name}/SKILL.md` — nested/plugin copy (often forgotten, diverges silently)
 4. `.claude-plugin/plugin.json` — version field + keywords
-5. `marketplace.json` — version field
-6. `README.md` — version history table
-7. `README.md` — badge row version (if badges exist)
-8. `references/changelog.md` — if exists
+5. `.claude-plugin/marketplace.json` (or root `marketplace.json`) — version field per plugin entry
+6. `package.json` — version field (if repo has npm tests)
+7. `eval-suite.json` (or `plugins/{name}/eval-suite.json`) — version field
+8. `README.md` — version history table
+9. `README.md` — badge row version (if badges exist)
+10. `references/changelog.md` — per-plugin changelog (if exists)
+11. Root `CHANGELOG.md` — repo-level changelog (if exists alongside references/ copy)
+12. `ROADMAP.md` — version history table (if exists)
+
+**Common miss:** repos with a `plugins/` layout have version in BOTH
+`plugins/{name}/.claude-plugin/plugin.json` AND root `.claude-plugin/marketplace.json`.
+The `eval-suite.json` version is also easy to miss — it lives next to SKILL.md but
+has its own independent version field. Run `npm test` after bumping — manifest
+consistency tests will catch any mismatches.
 
 ### Badge version sync
 
@@ -202,3 +238,28 @@ grep -rn "old_version" /tmp/skill-sync-{name}/
 - **Use this skill** for ongoing sync of already-published skills
 - **Do NOT use for** first-time publishing (use `publish-skill`), creating skills (use `skill-creator`), or improving quality (use `schliff`)
 - **Hand off to** `publish-skill` if the skill has no GitHub repo yet
+
+## When NOT to sync: same name but divergent ON PURPOSE
+
+Sync assumes two same-named copies *should* be identical and will overwrite one
+with the other. That's wrong when the two copies are **meant to differ** — e.g. a
+general skill in `~/.claude/skills/<name>` and a domain-specialized fork published
+in a marketplace repo (different framing, examples, trigger scope). Syncing would
+clobber the specialization.
+
+The fix is **not to sync them — give them distinct names.** Two skills with the
+same `name` but different bodies is a latent bug regardless of sync:
+
+- **Registry collision on install.** Once the marketplace copy is `/plugin install`-ed
+  while the personal copy exists, both land under one identifier — ambiguous which
+  loads when invoked.
+- **claudeception dedupes by name** — a future session treats them as one skill and
+  may "update" the wrong copy.
+- **This skill's own drift detector** flags them as out-of-sync forever.
+
+So: a specialization gets its **own** name + a bidirectional `See also` cross-ref to
+the general one (e.g. `code-reviewer-subagent-no-bash-blocked-on-pr-diff` general ↔
+`overnight-review-panel-blocked-reviewer-reads-as-clean` overnight). Mirrors the
+`subagent-driven-development` ↔ `subagent-review-tier-calibration-for-overnight-pr-chains`
+pattern. For *which repo* a skill should live in and copy-vs-cross-link, see
+`skill-portfolio-repo-placement-scan`. Only sync copies that are genuinely the SAME skill.

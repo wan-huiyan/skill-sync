@@ -10,7 +10,7 @@
       "name": "skill-sync",
       "source": "./plugins/skill-sync",
       "description": "Keep locally installed Claude Code skills in sync with their GitHub repos",
-      "version": "1.1.0"
+      "version": "1.2.0"
     }
   ]
 }
