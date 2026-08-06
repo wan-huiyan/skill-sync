@@ -1,6 +1,6 @@
 ---
 name: skill-sync
-version: "1.2.0"
+version: "1.3.0"
 description: |
   Keep locally installed Claude Code skills in sync with their GitHub repos.
   Use when the user says "sync my skills", "push skill updates", "which skills
@@ -115,6 +115,16 @@ Stored at `~/.claude/skill-sync-registry.json`:
       "type": "fork",
       "upstream": "wentingwang21/field-notes",
       "tracked_files": ["SKILL.md"]
+    },
+    "claude-statusline": {
+      "repo": "wan-huiyan/claude-statusline",
+      "type": "authored",
+      "tracked_files": ["SKILL.md", "references/fields.md"],
+      "documents_external_surface": {
+        "what": "Claude Code statusline stdin payload",
+        "verify": "dump a live payload; diff its key set against references/fields.md",
+        "last_verified": "2.1.223"
+      }
     }
   }
 }
@@ -123,6 +133,11 @@ Stored at `~/.claude/skill-sync-registry.json`:
 **`type` values:**
 - `authored` — user created this skill, push directly
 - `fork` — user forked someone else's skill, warn about upstream PR when pushing
+
+**`documents_external_surface`** (optional) — set on any skill documenting
+something it does not control. Drives the staleness check in "The second axis:
+doc ↔ reality drift". Absent means "nothing external to re-verify"; present
+with a stale or missing `last_verified` is a WARN.
 
 ## Sync Workflow (per skill)
 
@@ -134,6 +149,64 @@ For each registered skill:
 2. Compare each tracked file: `diff local_file repo_file`
 3. Report status: IN SYNC, DIRTY (list changed files), or MISSING (local skill deleted)
 4. Clean up `/tmp` clone after comparison
+
+### The second axis: doc ↔ reality drift
+
+**`IN SYNC` only means local matches repo. It says nothing about whether either
+one is still true.** A skill that documents an external surface — Claude Code's
+statusline JSON payload, a CLI's flags, a config schema, an API's response —
+was accurate when written and goes stale on its own, with both copies agreeing
+perfectly the whole way down.
+
+Seen 2026-08-06: `claude-statusline` reported `IN SYNC` on every tracked file
+while its `references/fields.md` stated that `effort`, `fast_mode`, `thinking`
+and `prompt_id` did not exist. Claude Code had shipped all four. A reader
+following the docs picked the wrong source for effort and rendered a stale
+label forever. Nothing in the sync report could have caught it, because nothing
+was out of sync.
+
+**Which skills need this check:** any whose `tracked_files` document something
+the skill does not control. Flag them in the registry:
+
+```json
+"claude-statusline": {
+  "repo": "wan-huiyan/claude-statusline",
+  "type": "authored",
+  "tracked_files": ["..."],
+  "documents_external_surface": {
+    "what": "Claude Code statusline stdin payload",
+    "verify": "dump a live payload and diff its key set against references/fields.md",
+    "last_verified": "2.1.223"
+  }
+}
+```
+
+**On push, re-verify rather than assume.** The procedure is always the same
+shape: capture the surface as it is *now*, diff it against what the doc claims,
+and update the stamp.
+
+```bash
+# Example — the statusline payload. Capture from the live surface, not the docs.
+jq -r 'keys[]' /tmp/statusline-payload.json | sort > /tmp/actual-keys.txt
+grep -oE '^\| `[a-z_.]+`' references/fields.md | tr -d '|` ' | cut -d. -f1 | sort -u > /tmp/documented.txt
+comm -23 /tmp/actual-keys.txt /tmp/documented.txt   # shipped but undocumented
+comm -13 /tmp/actual-keys.txt /tmp/documented.txt   # documented but gone
+```
+
+Carry a **`Last verified against <version>`** line in the doc itself, so the
+staleness is visible to a reader rather than only to whoever runs the check.
+Report it in the status table as its own column — an old stamp is a finding:
+
+```
+Skill               Repo                        Status    Surface verified
+──────────────────────────────────────────────────────────────────────────
+claude-statusline   wan-huiyan/claude-statusline IN SYNC   2.1.223 (current)
+some-api-skill      wan-huiyan/some-api-skill    IN SYNC   v3 (⚠ now v5)
+```
+
+A skill with `documents_external_surface` and no `last_verified`, or a stamp
+older than the currently installed version, is **WARN, not clean** — the same
+rule as a missing test suite.
 
 ### Pushing updates
 
@@ -185,11 +258,33 @@ consistency tests will catch any mismatches.
 ### Badge version sync
 
 **Dynamic badges** (`github/v/release`, `github/license`, `github/last-commit`) auto-update
-from GitHub API — no action needed on version bump. Just create a new GitHub release:
+from GitHub API — but `github/v/release` reads **GitHub Releases**, not `plugin.json`.
+A hand-cut release is a step someone eventually skips, and then the badge
+confidently displays a version that shipped two bumps ago.
+
+Seen 2026-08-06: `claude-statusline` shipped `plugin.json` 1.2.0 with its newest
+release still at v1.0.0, and `publish-skill` sat at 2.4.2 against a v2.3.0
+release. Both badges read green and both were wrong.
+
+**Prefer automating it.** Key a workflow off a repo-root `VERSION` file so
+cutting the release is the same act as bumping the version — see the
+`claude-plugin-repo-ci-release` skill, which ships the workflow and a
+structure validator that asserts `VERSION` equals `plugin.json`'s version, so
+the two cannot drift silently.
+
+Manual fallback, when the repo has no release automation yet:
 
 ```bash
 gh release create v${NEW_VER} --repo ${USERNAME}/${SKILL_NAME} \
   --title "v${NEW_VER}" --notes "Release notes here"
+```
+
+Either way, **check the release against the manifest after pushing** — this is
+the one drift the version-bump checklist above cannot catch, because the
+release lives on GitHub rather than in any tracked file:
+
+```bash
+gh release view --repo ${USERNAME}/${SKILL_NAME} --json tagName -q .tagName   # vs plugin.json
 ```
 
 **Static badges** (eval assertions, papers, python version) need manual update:
@@ -212,10 +307,32 @@ fi
 in the URL. Static badges contain `badge/version-` or `badge/license-`. If a repo still
 uses static version/license badges, suggest upgrading to dynamic ones.
 
-Verify no stale version strings remain:
+Verify no stale version strings remain — **and prove the grep can actually
+fail before you trust its silence:**
+
 ```bash
-grep -rn "old_version" /tmp/skill-sync-{name}/
+OLD="1.4.2"    # the version you are replacing
+# Negative control FIRST. An empty result and a broken pattern look identical,
+# and a version string is full of `.` — one unescaped metacharacter, or one
+# shell-quoting slip, and this sweep reports clean against a repo it never read.
+printf 'version: %s\n' "$OLD" | grep -qF "$OLD" \
+  && echo "control OK — the pattern matches a known-bad line" \
+  || { echo "PATTERN BROKEN — fix it before believing any result"; exit 1; }
+
+grep -rnF "$OLD" /tmp/skill-sync-{name}/ --exclude-dir=.git
 ```
+
+Use `grep -F` for literal needles. Burned 2026-08-06: a sweep of four copies of
+a file for a known-bad line reported all four clean; the pattern contained `$`
+and `{` and matched nothing anywhere, and two of the four were genuinely stale.
+
+The same rule applies to every check whose green is your evidence — the
+pre-push `npm test`, the tracked-file diff, this grep. **If you cannot say how
+the check would go red, you do not yet know that it passed.**
+
+Report *which* copy is authoritative, too. "All copies clean" and "the copy
+that actually loads is clean, and three superseded version directories still
+hold the old text" are different findings; only the second is honest.
 
 ### Common failure modes
 
@@ -224,6 +341,9 @@ grep -rn "old_version" /tmp/skill-sync-{name}/
 - **Nested `skills/` copy forgotten** — diverges silently from root copy. The sync workflow copies to both locations automatically.
 - **Installed `~/.claude/skills/` copy N versions behind** — if more than 1 version behind, do a full overwrite rather than incremental patching
 - **Metadata updated but SKILL.md forgotten** — bump SKILL.md frontmatter version FIRST, then propagate to metadata. A repo where `plugin.json` says v1.5 but `SKILL.md` says v1.0 signals broken process.
+- **`IN SYNC` on content that is factually stale** — the drift detector compares local against repo, and both go wrong together when the platform being documented moves. See "The second axis: doc ↔ reality drift". This is the failure mode most likely to survive a clean sync report indefinitely.
+- **GitHub Release behind `plugin.json`** — the version badge reads Releases, not the manifest, so it displays an old version while every tracked file is correct. Not visible to any file diff; check it explicitly or automate the release off `VERSION`.
+- **A check that cannot fail** — an empty grep, a test that skips when its interpreter is missing, a guard whose pattern never matched anything. Negative-control anything whose green you are treating as evidence.
 
 ## Error Handling
 

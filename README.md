@@ -115,7 +115,11 @@ npx skills add wan-huiyan/skill-sync --global
 
 | Version | Date | Changes |
 |---|---|---|
-| 1.0.0 | 2026-04-02 | Initial release: init, status, push commands. Registry format. Version bump checklist absorbed from publish-skill. |
+| 1.3.0 | 2026-08-06 | **Doc ↔ reality drift** — a second drift axis: `IN SYNC` only means local matches repo, and both go stale together when the platform a skill *documents* moves. Adds the optional `documents_external_surface` registry field, a re-verify procedure, and a `Last verified against <version>` stamp surfaced in the status table. Also: negative-control the stale-version grep (an empty result and a broken pattern are indistinguishable), and prefer release-on-`VERSION`-bump over the hand-cut `gh release create` that lets the version badge fall behind the manifest. |
+| 1.2.0 | 2026-06-01 | Canonical `plugins/<name>/` layout; `validate` and `backfill-tests` commands; "when NOT to sync — same name but divergent on purpose" guidance; automated test suite + CI |
+| 1.1.0 | 2026-04-02 | Initial release: init, status, push commands. Registry format. Version bump checklist absorbed from publish-skill. |
+
+<sub>Earlier rows previously listed the initial release as 1.0.0; it shipped as tag `v1.1.0`, and 1.2.0 was missing entirely. Corrected 2026-08-06.</sub>
 
 ## License
 
